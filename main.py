@@ -9,7 +9,7 @@ if __name__ == '__main__':
     if not os.path.exists(directory):
         print('directory does not exist')
 
-    tickers_json_file_path = 'scrapping/tickers.json'
+    tickers_json_file_path = 'scrapping/qualified-tickers.json'
 
     with open(tickers_json_file_path, 'r') as file:
         tickers = json.load(file)
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # Count the number of files
     files_count = len(files)
 
-    not_found_tickers_json_file_path = 'scrapping/not_found_tickers_2023-07-28_23-29-05.json'
+    not_found_tickers_json_file_path = 'scrapping/not_found_tickers_2023-07-29_11-32-36.json'
 
     with open(not_found_tickers_json_file_path, 'r') as file:
         not_found_tickers = json.load(file)

@@ -15,10 +15,10 @@ from tqdm import tqdm
 import traceback
 
 login_url = "https://ycharts.com/login"
-# scrape_url = "https://ycharts.com/companies/ATRA/altman_z_score"
+# scrape_url = "https://ycharts.com/companies/SSSSL/altman_z_score"
 
 payload = {
-    "username": "darekkruszel15@gmail.com",
+    "username": "kruszel15@gmail.com",
     "password": "***REMOVED***"
 }
 
@@ -26,6 +26,7 @@ not_found_tickers = set()
 
 driver = webdriver.Chrome()
 
+iter_counter = 0
 cnt = 0
 files_count = 0
 ticker = ''
@@ -49,11 +50,12 @@ try:
 
     files_count = len(list(directory.glob('*')))
 
-    not_found_tickers = set(json.loads(Path('not_found_tickers_2023-07-29_11-28-44.json').read_text()))
+    not_found_tickers = set(json.loads(Path('not_found_tickers_2023-07-29_11-32-36.json').read_text()))
 
     beginning_index = files_count + len(not_found_tickers) - 1
 
     for ticker in tqdm(tickers[beginning_index:]):
+
         scrape_url = f"https://ycharts.com/companies/{ticker}/altman_z_score"
 
         driver.get(scrape_url)
@@ -117,7 +119,7 @@ except Exception as e:
     print(f"Current URL: {driver.current_url}")
     print(f"Page title: {driver.title}")
 finally:
-    print(f"Ticker counter: {cnt + files_count}, ticker: {ticker})")
+    print(f"Iter counter: {iter_counter}, Ticker counter: {cnt + files_count}, ticker: {ticker})")
     now_str = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     Path(f'not_found_tickers_{now_str}.json').write_text(json.dumps(not_found_tickers))
     driver.quit()
