@@ -18,7 +18,7 @@ import json
 nasdaq_tickers = []
 
 # Open the file and read each line
-with open('NASDAQ.txt', 'r') as f:
+with open('../dataset/tickers/NASDAQ.txt', 'r') as f:
     next(f)  # Skip the header line
     for line in f:
         symbol = line.split('\t')[0]
@@ -43,7 +43,7 @@ for symbol in nasdaq_tickers:
 
 print(f'There are {len( sav_set )} qualified stock symbols...')
 
-with open('qualified-tickers.json', 'w') as f:
+with open('../dataset/tickers/qualified-tickers.json', 'w') as f:
     json.dump(list(sav_set), f)
 
 print(sav_set)
