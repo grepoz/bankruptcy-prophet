@@ -8,11 +8,13 @@ dataset/stock-data/
 dataset/backup-best-data/
 dataset/data/
 dataset/financial_data/
+dataset/financial_data-backup/
 dataset/financial_data_old/
 dataset/Florida-UCLA-LoPucki Bankruptcy Research Database 1-12-2023/
 dataset/gurufocus-immediate-response-for-stockid/
 dataset/data.zip
-
+dataset/financial_data_two_tickers_case/
+dataset/financial_data_two_tickers_case-backup/
 
 
 # User-specific stuff
