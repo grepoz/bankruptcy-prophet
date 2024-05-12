@@ -1,7 +1,3 @@
-from data_provider.data_factory import data_provider
-from experiments.exp_basic import Exp_Basic
-from utils.tools import EarlyStopping, adjust_learning_rate, visual, save_metrics
-from utils.metrics import metric, calculate_accuracy, calculate_f1, calculate_precision, calculate_specificity
 import torch
 import torch.nn as nn
 from torch import optim
@@ -10,26 +6,46 @@ import time
 import warnings
 import numpy as np
 
+from data_provider.data_factory import data_provider
+from utils.tools import EarlyStopping, adjust_learning_rate, visual, save_metrics
+from utils.metrics import metric, calculate_accuracy, calculate_f1, calculate_precision, calculate_specificity
+from model import IT_HBERT
+
 warnings.filterwarnings('ignore')
 
 
-class Exp_Long_Term_Forecast(Exp_Basic):
-    def __init__(self, args):
-        super(Exp_Long_Term_Forecast, self).__init__(args)
+class Exp_Long_Term_Forecast:
+    def __init__(self, hybrid_model_args, iTransformer_args, HBERT_args):
+        self.hybrid_model_args = hybrid_model_args
+        self.iTransformer_args = iTransformer_args
+        self.HBERT_args = HBERT_args
+        self.device = self._acquire_device()
+        self.model = self._build_model().to(self.device)
+
+    def _acquire_device(self):
+        if self.hybrid_model_args.use_gpu:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(
+                self.hybrid_model_args.gpu) if not self.hybrid_model_args.use_multi_gpu else self.hybrid_model_args.devices
+            device = torch.device('cuda:{}'.format(self.hybrid_model_args.gpu))
+            print('Use GPU: cuda:{}'.format(self.hybrid_model_args.gpu))
+        else:
+            device = torch.device('cpu')
+            print('Use CPU')
+        return device
 
     def _build_model(self):
-        model = self.model_dict[self.args.model].Model(self.args).float()
+        model = IT_HBERT.Model(self.iTransformer_args, self.HBERT_args).float()
 
-        if self.args.use_multi_gpu and self.args.use_gpu:
-            model = nn.DataParallel(model, device_ids=self.args.device_ids)
+        if self.hybrid_model_args.use_multi_gpu and self.hybrid_model_args.use_gpu:
+            model = nn.DataParallel(model, device_ids=self.hybrid_model_args.device_ids)
         return model
 
     def _get_data(self, flag):
-        data_set, data_loader = data_provider(self.args, flag)
+        data_set, data_loader = data_provider(self.hybrid_model_args, flag)
         return data_set, data_loader
 
     def _select_optimizer(self):
-        return optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
+        return optim.AdamW(self.model.parameters(), lr=self.hybrid_model_args.learning_rate)
 
     def _select_criterion(self):
         return nn.BCELoss()
@@ -41,14 +57,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         train_metrics_directory = './train_results/metrics'
 
-        path = os.path.join(self.args.checkpoints, setting)
+        path = os.path.join(self.hybrid_model_args.checkpoints, setting)
         if not os.path.exists(path):
             os.makedirs(path)
 
         time_now = time.time()
 
         train_steps = len(train_loader)
-        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
+        early_stopping = EarlyStopping(patience=self.hybrid_model_args.patience, verbose=True)
 
         model_optim = self._select_optimizer()
         criterion = self._select_criterion()
@@ -60,7 +76,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         test_losses = []
         test_accuracies = []
 
-        for epoch in range(self.args.train_epochs):
+        for epoch in range(self.hybrid_model_args.train_epochs):
             epoch_loss = []
             epoch_accuracy = []
 
@@ -84,7 +100,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 if (i + 1) % 10 == 0:
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - time_now) / 10
-                    left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
+                    left_time = speed * ((self.hybrid_model_args.train_epochs - epoch) * train_steps - i)
                     print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
                     time_now = time.time()
 
@@ -117,7 +133,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             #     print("Early stopping")
             #     break
 
-            adjust_learning_rate(model_optim, epoch + 1, self.args)
+            adjust_learning_rate(model_optim, epoch + 1, self.hybrid_model_args)
 
             # get_cka(self.args, setting, self.model, train_loader, self.device, epoch)
 
@@ -193,7 +209,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
                 outputs = outputs.detach().cpu().numpy()
                 batch_y = batch_y.detach().cpu().numpy()
-                if test_data.scale and self.args.inverse:
+                if test_data.scale and self.iTransformer_args.inverse:
                     shape = outputs.shape
                     outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                     batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
@@ -238,7 +254,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         pred_data, pred_loader = self._get_data(flag='pred')
 
         if load:
-            path = os.path.join(self.args.checkpoints, setting)
+            path = os.path.join(self.hybrid_model_args.checkpoints, setting)
             best_model_path = f'{path}/checkpoint.pth'
             self.model.load_state_dict(torch.load(best_model_path))
 
@@ -251,7 +267,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
                 outputs = self.model(batch_x, batch_x_mark, None, None)
                 outputs = outputs.detach().cpu().numpy()
-                if pred_data.scale and self.args.inverse:
+                if pred_data.scale and self.iTransformer_args.inverse:
                     shape = outputs.shape
                     outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                 preds.append(outputs)
