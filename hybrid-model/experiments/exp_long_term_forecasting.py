@@ -5,6 +5,7 @@ import os
 import time
 import warnings
 import numpy as np
+from tqdm import tqdm
 
 from data_provider.data_factory import data_provider
 from utils.tools import EarlyStopping, adjust_learning_rate, visual, save_metrics
@@ -48,22 +49,38 @@ class Exp_Long_Term_Forecast:
         return optim.AdamW(self.model.parameters(), lr=self.hybrid_model_args.learning_rate)
 
     def _select_criterion(self):
-        return nn.BCELoss()
+        return nn.BCELoss(reduction='none')
+
+    def calculate_loss(self, outputs, batch_y_numerical):
+        criterion = self._select_criterion()
+
+        onehot_encoded_truth = nn.functional.one_hot(batch_y_numerical.to(torch.int64), 2).squeeze(1).float()
+
+        loss = criterion(outputs, onehot_encoded_truth)
+
+        weights = torch.tensor([1.0, 49.0])
+
+        weighted_loss = loss * weights
+        final_loss = weighted_loss.mean()
+
+        return final_loss
 
     def train(self, setting):
         numeric_train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
 
+        print('loaded data - training model')
+
         train_metrics_directory = './train_results/metrics'
+
+        if not os.path.exists(train_metrics_directory):
+            os.makedirs(train_metrics_directory)
 
         path = os.path.join(self.hybrid_model_args.checkpoints, setting)
         if not os.path.exists(path):
             os.makedirs(path)
 
-        time_now = time.time()
-
-        train_steps = len(train_loader)
         early_stopping = EarlyStopping(patience=self.hybrid_model_args.patience, verbose=True)
 
         model_optim = self._select_optimizer()
@@ -76,69 +93,66 @@ class Exp_Long_Term_Forecast:
         test_losses = []
         test_accuracies = []
 
-        for epoch in range(self.hybrid_model_args.train_epochs):
+        for epoch in tqdm(range(self.hybrid_model_args.train_epochs)):
             epoch_loss = []
             epoch_accuracy = []
 
             self.model.train()
 
-            epoch_time = time.time()
-            for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in enumerate(train_loader):
+            for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in (enumerate(pbar := tqdm(train_loader, position=0))):
+                pbar.set_description(f"Epoch: {epoch+1}/{self.hybrid_model_args.train_epochs}")
+
                 model_optim.zero_grad()
 
                 batch_x_numerical = batch_x_numerical[0].float().to(self.device)
                 batch_y_numerical = batch_y_numerical[0].float().to(self.device)
+                batch_x_textual = batch_x_textual[0].float().to(self.device)
 
                 outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
-                # todo later: adjust loss according class (higher weight for positive class)
-                # calc another loss for textual data?
+                loss = self.calculate_loss(outputs, batch_y_numerical)
 
-                loss = criterion(outputs, batch_y_numerical)
                 epoch_loss.append(loss.item())
-
-                if (i + 1) % 10 == 0:
-                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
-                    speed = (time.time() - time_now) / 10
-                    left_time = speed * ((self.hybrid_model_args.train_epochs - epoch) * train_steps - i)
-                    print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
-                    time_now = time.time()
 
                 loss.backward()
                 model_optim.step()
 
                 batch_y_numerical = batch_y_numerical.detach().cpu().numpy()
+                outputs = outputs.detach().cpu().numpy()
+                outputs = np.argmax(outputs, axis=1)
+
                 accuracy = calculate_accuracy(outputs, batch_y_numerical)
                 epoch_accuracy.append(accuracy)
 
-            print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             epoch_loss = np.average(epoch_loss)
             train_losses.append(epoch_loss)
             train_accuracies.append(np.average(epoch_accuracy))
 
-            # TODO: fix vali and test
-            # vali_loss, vali_accuracy = self.vali(vali_data, vali_loader, criterion)
-            # test_loss, test_accuracy = self.vali(test_data, test_loader, criterion)
-            #
-            # vali_losses.append(vali_loss)
-            # vali_accuracies.append(vali_accuracy)
-            #
-            # test_losses.append(test_loss)
-            # test_accuracies.append(test_accuracy)
-            #
-            # print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
-            #     epoch + 1, train_steps, epoch_loss, vali_loss, test_loss))
-            # early_stopping(vali_loss, self.model, path)
-            # if early_stopping.early_stop:
-            #     print("Early stopping")
-            #     break
+            vali_loss, vali_accuracy = self.vali(vali_data, vali_loader, criterion)
+            test_loss, test_accuracy = self.vali(test_data, test_loader, criterion)
+
+            vali_losses.append(vali_loss)
+            vali_accuracies.append(vali_accuracy)
+
+            test_losses.append(test_loss)
+            test_accuracies.append(test_accuracy)
+
+            early_stopping(vali_loss, self.model, path)
+            if early_stopping.early_stop:
+                print("\nEarly stopping")
+                break
 
             adjust_learning_rate(model_optim, epoch + 1, self.hybrid_model_args)
 
-            # get_cka(self.args, setting, self.model, train_loader, self.device, epoch)
-
         best_model_path = f'{path}/checkpoint.pth'
-        self.model.load_state_dict(torch.load(best_model_path))
+        # self.model.load_state_dict(torch.load(best_model_path))
+
+        torch.save({
+            'epoch': self.hybrid_model_args.train_epochs,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': model_optim.state_dict(),
+            'loss': epoch_loss,
+        }, best_model_path)
 
         save_metrics(train_accuracies, train_losses, f'{train_metrics_directory}/train.png')
         save_metrics(vali_accuracies, vali_losses, f'{train_metrics_directory}/vali.png')
@@ -153,26 +167,25 @@ class Exp_Long_Term_Forecast:
 
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
+            for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in enumerate(vali_loader):
 
-                batch_x = batch_x[0].float().to(self.device)
-                batch_y = batch_y[0].float().to(self.device)
+                batch_x_numerical = batch_x_numerical[0].float().to(self.device)
+                batch_y_numerical = batch_y_numerical[0].float().to(self.device)
+                batch_x_textual = batch_x_textual[0].float().to(self.device)
 
-                batch_x_mark = None
-
-                dec_inp = torch.zeros_like(batch_x).float().to(self.device)
-
-                outputs = self.model(batch_x, batch_x_mark, dec_inp, None)
+                outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
                 pred = outputs.detach().cpu()
-                true = batch_y.detach().cpu()
+                true = batch_y_numerical.detach().cpu()
 
-                loss = criterion(pred, true)
+                loss = self.calculate_loss(pred, true)
 
                 total_loss.append(loss)
 
-                batch_y = batch_y.detach().cpu().numpy()
-                accuracy = calculate_accuracy(outputs, batch_y)
+                batch_y_numerical = batch_y_numerical.detach().cpu().numpy()
+                pred = np.argmax(pred, axis=1).numpy()
+
+                accuracy = calculate_accuracy(pred, batch_y_numerical)
                 total_accuracy.append(accuracy)
 
         total_loss = np.average(total_loss)
@@ -196,25 +209,24 @@ class Exp_Long_Term_Forecast:
 
         self.model.eval()
         with torch.no_grad():
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
+            for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in enumerate(test_loader):
 
-                batch_x = batch_x[0].float().to(self.device)
-                batch_y = batch_y[0].float().to(self.device)
+                batch_x_numerical = batch_x_numerical[0].float().to(self.device)
+                batch_y_numerical = batch_y_numerical[0].float().to(self.device)
+                batch_x_textual = batch_x_textual[0].float().to(self.device)
 
-                batch_x_mark = None
-
-                dec_inp = torch.zeros_like(batch_x).float().to(self.device)
-
-                outputs = self.model(batch_x, batch_x_mark, dec_inp, None)
+                outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
                 outputs = outputs.detach().cpu().numpy()
-                batch_y = batch_y.detach().cpu().numpy()
+                batch_y = batch_y_numerical.detach().cpu().numpy()
+
                 if test_data.scale and self.iTransformer_args.inverse:
                     shape = outputs.shape
                     outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                     batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
 
-                pred = outputs
+                pred = np.argmax(outputs, axis=1)
+
                 true = batch_y
 
                 preds.append(pred)

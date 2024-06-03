@@ -40,7 +40,6 @@ class Model(nn.Module):
             ],
             norm_layer=torch.nn.LayerNorm(itransformer_configs.d_model)
         )
-        self.projector = nn.Linear(itransformer_configs.d_model, itransformer_configs.pred_len, bias=True)
 
         """Hierarchical BERT head"""
         self.bert = BertModel(hbert_config)
@@ -48,12 +47,16 @@ class Model(nn.Module):
         self.classifier = nn.Linear(hbert_config.hidden_size, self.hbert_config.num_labels)
 
         """Extra mlp for the output of the heads"""
-        # todo: add mlp instead of linear
-        self.number_of_variate = 17
+        self.number_of_variate = 18
 
-        self.linear = nn.Sequential(
-            nn.Linear(self.number_of_variate, 1, bias=True),
-            nn.Sigmoid()
+        flatten_input_size = self.number_of_variate * itransformer_configs.d_model
+
+        self.mlp = nn.Sequential(
+            nn.Linear(flatten_input_size, self.number_of_variate, bias=True),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(self.number_of_variate, 2),
+            nn.Softmax(dim=1)
         )
 
     def forward(self, x_numerical_encoded, batch_x_textual):
@@ -73,41 +76,34 @@ class Model(nn.Module):
         # Embedding
         # B L N -> B N E                (B L N -> B L E in the vanilla Transformer)
         x_numerical_encoded_output = self.iTransformer_encoder_embedding(x_numerical_encoded)
-        
+
         # B N E -> B N E                (B L E -> B L E in the vanilla Transformer)
         # the dimensions of embedded time series has been inverted, and then processed by native attn, layernorm and ffn modules
         x_numerical_encoded_output, attns = self.encoder(x_numerical_encoded_output, attn_mask=None)
 
         # B N E -> B N S -> B S N
-        # TODO: delete decoder - read paper to understand
-        dec_out = self.projector(x_numerical_encoded_output).permute(0, 2, 1)[:, :, :N] # filter the covariates
+        dec_out = x_numerical_encoded_output.permute(0, 2, 1)[:, :, :N] # filter the covariates
 
         if self.use_norm:
             # De-Normalization from Non-stationary Transformer
-            # TODO: should it also stay? read paper to understand
             dec_out = dec_out * (stdev[:, 0, :].unsqueeze(1).repeat(1, self.pred_len, 1))
             dec_out = dec_out + (means[:, 0, :].unsqueeze(1).repeat(1, self.pred_len, 1))
 
-        # extra linear layer for the output
-
-        dec_out = self.linear(dec_out)
-        dec_out = dec_out.squeeze(2)
+        dec_out = dec_out.permute(0, 2, 1)
 
         """hierarchical bert head"""
-        """
-        :param x: A batch by sequence length integer tensor of token indices.
-        :return: predicted log-probability vectors for each token based on the preceding tokens.
-        """
         outputs = self.bert(attention_mask=None,
                             position_ids=None,
                             inputs_embeds=batch_x_textual)
 
         pooled_output = outputs[1]
 
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        """Output MLP head for the heads"""
+        # add the output of the transformer to the output of the bert through second axis
+        output = torch.cat((dec_out, pooled_output.unsqueeze(dim=1)), 1)
 
-        outputs = (logits,) + outputs[2:]
+        # flatten the output
+        output = output.view(output.size(0), -1)
+        output = self.mlp(output)
 
-        # todo: return concatenated output
-        return dec_out
+        return output
