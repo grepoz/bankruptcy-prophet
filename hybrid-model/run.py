@@ -4,6 +4,10 @@ from experiments.exp_long_term_forecasting import Exp_Long_Term_Forecast
 import random
 import numpy as np
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
 if __name__ == '__main__':
     fix_seed = 2024
     random.seed(fix_seed)
@@ -23,7 +27,8 @@ if __name__ == '__main__':
     # todo: add data loader for text data
     hybrid_model_parser.add_argument('--data', type=str, default='bankrupt_companies_with_17_variables_5_years', help='dataset type')
     hybrid_model_parser.add_argument('--root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
-    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='bankrupt_companies_with_17_variables_5_years_version2_split.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies_with_17_variables_5_years_version2_split_matched_with_reports.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data_matched_with_fin_data_preprocessed_with_labels_split.csv', help='data csv file')
     hybrid_model_parser.add_argument('--features', type=str, default='M',
                                      help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')  # todo: rather remove
     hybrid_model_parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')  # todo: rather remove
@@ -32,7 +37,7 @@ if __name__ == '__main__':
     hybrid_model_parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     # GPU
-    # TODO: add code to run on gpu for gpu use case
+    # TODO: add code to run on gpu for gpu use case (Wojtek)
     hybrid_model_parser.add_argument('--use_gpu', type=bool, default=False, help='use gpu')
     hybrid_model_parser.add_argument('--gpu', type=int, default=0, help='gpu')
     hybrid_model_parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
@@ -43,7 +48,7 @@ if __name__ == '__main__':
     hybrid_model_parser.add_argument('--itr', type=int, default=1, help='experiments times')
 
     # learning
-    hybrid_model_parser.add_argument('--train_epochs', type=int, default=8, help='train epochs')
+    hybrid_model_parser.add_argument('--train_epochs', type=int, default=7, help='train epochs')
     hybrid_model_parser.add_argument('--batch_size', type=int, default=8, help='batch size of train input data')
     hybrid_model_parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
     hybrid_model_parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
@@ -68,7 +73,7 @@ if __name__ == '__main__':
     iTransformer_parser.add_argument('--enc_in', type=int, default=17, help='encoder input size')
     iTransformer_parser.add_argument('--dec_in', type=int, default=17, help='decoder input size')
     iTransformer_parser.add_argument('--c_out', type=int, default=7, help='output size') # applicable on arbitrary number of variates in inverted Transformers
-    iTransformer_parser.add_argument('--d_model', type=int, default=256, help='dimension of model')
+    iTransformer_parser.add_argument('--d_model', type=int, default=768, help='dimension of model')
     iTransformer_parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
     iTransformer_parser.add_argument('--e_layers', type=int, default=1, help='num of encoder layers')
     iTransformer_parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')

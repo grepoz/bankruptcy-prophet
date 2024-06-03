@@ -9,7 +9,7 @@ def data_provider(args, flag):
         root_path=args.root_path,
         flag=flag,
         numerical_data_path=args.numerical_data_path,
-        text_data_path='TODO', # TODO
+        raw_textual_data_path=args.raw_textual_data_path,
         batch_size=args.batch_size,
     )
     print(flag, len(data_set))

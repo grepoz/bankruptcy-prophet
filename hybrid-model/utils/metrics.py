@@ -41,17 +41,15 @@ def metric(pred, true):
     return mae, mse, rmse, mape, mspe
 
 
-def calculate_accuracy(outputs, batch_y):
-    predictions = np.where(outputs > 0.5, 1, 0)
-
+def calculate_accuracy(predictions, batch_y):
     return np.mean(predictions == batch_y)
 
 
 def calculate_confusion_matrix_values(preds, trues):
-    tp = np.sum(np.logical_and(preds > 0.5, trues == 1.0))
-    fp = np.sum(np.logical_and(preds > 0.5, trues == 0.0))
-    tn = np.sum(np.logical_and(preds <= 0.5, trues == 0.0))
-    fn = np.sum(np.logical_and(preds <= 0.5, trues == 1.0))
+    tp = np.sum(np.logical_and(preds == 1.0, trues == 1.0))
+    fp = np.sum(np.logical_and(preds == 1.0, trues == 0.0))
+    tn = np.sum(np.logical_and(preds == 0.0, trues == 0.0))
+    fn = np.sum(np.logical_and(preds == 0.0, trues == 1.0))
 
     return tp, fp, tn, fn
 
