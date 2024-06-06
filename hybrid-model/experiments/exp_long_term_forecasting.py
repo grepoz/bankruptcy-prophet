@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 import os
 import time
@@ -13,6 +14,10 @@ from utils.metrics import metric, calculate_accuracy, calculate_f1, calculate_pr
 from model import IT_HBERT
 
 warnings.filterwarnings('ignore')
+
+
+def sigmoid(logits):
+    return F.sigmoid(logits)
 
 
 class Exp_Long_Term_Forecast:
@@ -49,21 +54,9 @@ class Exp_Long_Term_Forecast:
         return optim.AdamW(self.model.parameters(), lr=self.hybrid_model_args.learning_rate)
 
     def _select_criterion(self):
-        return nn.BCELoss(reduction='none')
+        pos_weight = torch.tensor([1.0, 49.0])
 
-    def calculate_loss(self, outputs, batch_y_numerical):
-        criterion = self._select_criterion()
-
-        onehot_encoded_truth = nn.functional.one_hot(batch_y_numerical.to(torch.int64), 2).squeeze(1).float()
-
-        loss = criterion(outputs, onehot_encoded_truth)
-
-        weights = torch.tensor([1.0, 49.0])
-
-        weighted_loss = loss * weights
-        final_loss = weighted_loss.mean()
-
-        return final_loss
+        return nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     def train(self, setting):
         numeric_train_data, train_loader = self._get_data(flag='train')
@@ -110,7 +103,9 @@ class Exp_Long_Term_Forecast:
 
                 outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
-                loss = self.calculate_loss(outputs, batch_y_numerical)
+                one_hot = nn.functional.one_hot(batch_y_numerical.to(torch.int64), num_classes=2).squeeze(1).float().to(self.device)
+
+                loss = criterion(outputs, one_hot)
 
                 epoch_loss.append(loss.item())
 
@@ -118,8 +113,8 @@ class Exp_Long_Term_Forecast:
                 model_optim.step()
 
                 batch_y_numerical = batch_y_numerical.detach().cpu().numpy()
-                outputs = outputs.detach().cpu().numpy()
-                outputs = np.argmax(outputs, axis=1)
+                sigmoid_outputs = sigmoid(outputs).detach().cpu().numpy()
+                outputs = np.argmax(sigmoid_outputs, axis=1)
 
                 accuracy = calculate_accuracy(outputs, batch_y_numerical)
                 epoch_accuracy.append(accuracy)
@@ -173,19 +168,19 @@ class Exp_Long_Term_Forecast:
                 batch_y_numerical = batch_y_numerical[0].float().to(self.device)
                 batch_x_textual = batch_x_textual[0].float().to(self.device)
 
-                outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
+                outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device).detach().cpu()
 
-                pred = outputs.detach().cpu()
-                true = batch_y_numerical.detach().cpu()
+                one_hot = nn.functional.one_hot(batch_y_numerical.to(torch.int64), num_classes=2).squeeze(1).float().to(self.device)
 
-                loss = self.calculate_loss(pred, true)
+                loss = criterion(outputs, one_hot)
 
                 total_loss.append(loss)
 
                 batch_y_numerical = batch_y_numerical.detach().cpu().numpy()
-                pred = np.argmax(pred, axis=1).numpy()
+                sigmoid_outputs = sigmoid(outputs).detach().cpu().numpy()
+                outputs = np.argmax(sigmoid_outputs, axis=1)
 
-                accuracy = calculate_accuracy(pred, batch_y_numerical)
+                accuracy = calculate_accuracy(outputs, batch_y_numerical)
                 total_accuracy.append(accuracy)
 
         total_loss = np.average(total_loss)
@@ -217,20 +212,13 @@ class Exp_Long_Term_Forecast:
 
                 outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
-                outputs = outputs.detach().cpu().numpy()
-                batch_y = batch_y_numerical.detach().cpu().numpy()
+                batch_y_numerical = batch_y_numerical.detach().cpu().numpy()
 
-                if test_data.scale and self.iTransformer_args.inverse:
-                    shape = outputs.shape
-                    outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
-                    batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
+                sigmoid_outputs = sigmoid(outputs).detach().cpu().numpy()
+                outputs = np.argmax(sigmoid_outputs, axis=1)
 
-                pred = np.argmax(outputs, axis=1)
-
-                true = batch_y
-
-                preds.append(pred)
-                trues.append(true)
+                preds.append(outputs)
+                trues.append(batch_y_numerical)
 
         preds = np.array(preds).reshape(-1)
         trues = np.array(trues).reshape(-1)
@@ -276,12 +264,10 @@ class Exp_Long_Term_Forecast:
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
                 batch_x = batch_x.float().to(self.device)
-
+                # TODO: update this to use the textual data
                 outputs = self.model(batch_x, batch_x_mark, None, None)
                 outputs = outputs.detach().cpu().numpy()
-                if pred_data.scale and self.iTransformer_args.inverse:
-                    shape = outputs.shape
-                    outputs = pred_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
+
                 preds.append(outputs)
 
         preds = np.array(preds)

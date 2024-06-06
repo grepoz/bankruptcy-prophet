@@ -24,16 +24,10 @@ if __name__ == '__main__':
     #                                  help='model name, options: [iTransformer, iInformer, iReformer, iFlowformer, iFlashformer]')
 
     # data loader
-    # todo: add data loader for text data
     hybrid_model_parser.add_argument('--data', type=str, default='bankrupt_companies_with_17_variables_5_years', help='dataset type')
     hybrid_model_parser.add_argument('--root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
     hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies_with_17_variables_5_years_version2_split_matched_with_reports.csv', help='data csv file')
     hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data_matched_with_fin_data_preprocessed_with_labels_split.csv', help='data csv file')
-    hybrid_model_parser.add_argument('--features', type=str, default='M',
-                                     help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')  # todo: rather remove
-    hybrid_model_parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')  # todo: rather remove
-    hybrid_model_parser.add_argument('--freq', type=str, default='h',
-                                     help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h') # todo: rather remove
     hybrid_model_parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     # GPU
@@ -48,14 +42,12 @@ if __name__ == '__main__':
     hybrid_model_parser.add_argument('--itr', type=int, default=1, help='experiments times')
 
     # learning
-    hybrid_model_parser.add_argument('--train_epochs', type=int, default=7, help='train epochs')
+    hybrid_model_parser.add_argument('--train_epochs', type=int, default=8, help='train epochs')
     hybrid_model_parser.add_argument('--batch_size', type=int, default=8, help='batch size of train input data')
     hybrid_model_parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
     hybrid_model_parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
     hybrid_model_parser.add_argument('--des', type=str, default='test', help='exp description')
-    hybrid_model_parser.add_argument('--loss', type=str, default='MSE', help='loss function')
-    hybrid_model_parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
-    hybrid_model_parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
+    hybrid_model_parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
     hybrid_model_parser.add_argument('-r', '--random_seeds', nargs='+', default=['2024'], help="List of random seeds")
 
     hybrid_model_args = hybrid_model_parser.parse_args()
@@ -92,7 +84,6 @@ if __name__ == '__main__':
 
     # iTransformer
     iTransformer_parser.add_argument('--channel_independence', type=bool, default=False, help='whether to use channel_independence mechanism')
-    iTransformer_parser.add_argument('--inverse', action='store_true', help='inverse output data', default=False)
     iTransformer_parser.add_argument('--class_strategy', type=str, default='projection', help='projection/average/cls_token')
     iTransformer_parser.add_argument('--target_root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
     iTransformer_parser.add_argument('--target_data_path', type=str, default='bankrupt_companies_with_17_variables_5_years_version2_split.csv', help='data file')
@@ -141,9 +132,8 @@ if __name__ == '__main__':
     if hybrid_model_args.is_training:
         for ii in range(hybrid_model_args.itr):
             # setting record of experiments
-            setting = '{}_{}_ft{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+            setting = '{}_ft{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
                 hybrid_model_args.data,
-                hybrid_model_args.features,
                 iTransformer_args.seq_len,
                 iTransformer_args.pred_len,
                 iTransformer_args.d_model,

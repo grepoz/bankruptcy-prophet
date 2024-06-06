@@ -4,3 +4,4 @@ numpy
 matplotlib==3.7.0
 torch==2.2.2
 reformer-pytorch==1.4.4
+scipy==1.12
