@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import string
 from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 import warnings
@@ -38,12 +39,18 @@ class Dataset_BC_17_variables_5_years(Dataset):
 
         self.__read_data__()
 
+    def preprocess_text(self, text):
+        text = text.lower()
+        text = text.translate(str.maketrans('', '', string.digits))
+        return text
+
     def __read_data__(self):
         df_raw_numerical = pd.read_csv(os.path.join(self.root_path, self.numerical_data_path))
         df_numerical = df_raw_numerical[df_raw_numerical['subset'] == self.set_type]
 
         df_raw_textual = pd.read_csv(os.path.join(self.root_path, self.raw_textual_data_path))
         df_textual = df_raw_textual[df_raw_textual['subset'] == self.set_type]
+        df_textual['text'] = df_textual['text'].apply(self.preprocess_text)
 
         df_numerical = df_numerical[df_numerical['cik'].isin(df_textual['cik'])]
         df_numerical_unique_cik = df_numerical['cik'].unique()

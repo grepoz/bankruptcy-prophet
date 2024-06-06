@@ -30,8 +30,13 @@ class Model(nn.Module):
             [
                 EncoderLayer(
                     AttentionLayer(
-                        FullAttention(False, itransformer_configs.factor, attention_dropout=itransformer_configs.dropout,
-                                      output_attention=itransformer_configs.output_attention), itransformer_configs.d_model, itransformer_configs.n_heads),
+                        FullAttention(
+                            False,
+                            itransformer_configs.factor,
+                            attention_dropout=itransformer_configs.dropout,
+                            output_attention=itransformer_configs.output_attention),
+                        itransformer_configs.d_model,
+                        itransformer_configs.n_heads),
                     itransformer_configs.d_model,
                     itransformer_configs.d_ff,
                     dropout=itransformer_configs.dropout,
@@ -55,8 +60,7 @@ class Model(nn.Module):
             nn.Linear(flatten_input_size, self.number_of_variate, bias=True),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(self.number_of_variate, 2),
-            nn.Softmax(dim=1)
+            nn.Linear(self.number_of_variate, 2)
         )
 
     def forward(self, x_numerical_encoded, batch_x_textual):
