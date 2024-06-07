@@ -17,7 +17,7 @@ class Dataset_BC_17_variables_5_years(Dataset):
                  numerical_data_path='bankrupt_companies_with_17_variables_5_years_version2_split_matched_with_reports.csv',
                  raw_textual_data_path='textual_data_matched_with_fin_data_preprocessed.csv',
                  scale=True,
-                 batch_size=32,
+                 batch_size=16,
                  company_observation_period=5,
                  use_cached_textual_data=True,
                  textual_data_encoding_size=768):

@@ -54,7 +54,7 @@ class Exp_Long_Term_Forecast:
         return optim.AdamW(self.model.parameters(), lr=self.hybrid_model_args.learning_rate)
 
     def _select_criterion(self):
-        pos_weight = torch.tensor([1.0, 49.0])
+        pos_weight = torch.tensor([1.0, 1.23])
 
         return nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
@@ -106,7 +106,6 @@ class Exp_Long_Term_Forecast:
                 one_hot = nn.functional.one_hot(batch_y_numerical.to(torch.int64), num_classes=2).squeeze(1).float().to(self.device)
 
                 loss = criterion(outputs, one_hot)
-
                 epoch_loss.append(loss.item())
 
                 loss.backward()

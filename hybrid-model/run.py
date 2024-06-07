@@ -14,20 +14,18 @@ if __name__ == '__main__':
     torch.manual_seed(fix_seed)
     np.random.seed(fix_seed)
 
+    """-------------------"""
     """Hybrid model parser"""
     hybrid_model_parser = argparse.ArgumentParser(description='hybrid model general')
 
     # basic config
     hybrid_model_parser.add_argument('--is_training', type=int, default=1, help='status')
-    # hybrid_model_parser.add_argument('--model_id', type=str, default='test', help='model id')
-    # hybrid_model_parser.add_argument('--model', type=str, default='Transformer',
-    #                                  help='model name, options: [iTransformer, iInformer, iReformer, iFlowformer, iFlashformer]')
 
     # data loader
     hybrid_model_parser.add_argument('--data', type=str, default='bankrupt_companies_with_17_variables_5_years', help='dataset type')
     hybrid_model_parser.add_argument('--root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
-    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies_with_17_variables_5_years_version2_split_matched_with_reports.csv', help='data csv file')
-    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data_matched_with_fin_data_preprocessed_with_labels_split.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies-17_variables-5_years_per_object-balanced-split-matched_with_textual_data-shuffled.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data-matched_and_aligned_with_fin_data-split.csv', help='data csv file')
     hybrid_model_parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     # GPU
@@ -63,12 +61,10 @@ if __name__ == '__main__':
 
     # model define
     iTransformer_parser.add_argument('--enc_in', type=int, default=17, help='encoder input size')
-    iTransformer_parser.add_argument('--dec_in', type=int, default=17, help='decoder input size')
     iTransformer_parser.add_argument('--c_out', type=int, default=7, help='output size') # applicable on arbitrary number of variates in inverted Transformers
     iTransformer_parser.add_argument('--d_model', type=int, default=768, help='dimension of model')
     iTransformer_parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
     iTransformer_parser.add_argument('--e_layers', type=int, default=1, help='num of encoder layers')
-    iTransformer_parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
     iTransformer_parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
     iTransformer_parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average')
     iTransformer_parser.add_argument('--factor', type=int, default=1, help='attn factor')
@@ -132,14 +128,13 @@ if __name__ == '__main__':
     if hybrid_model_args.is_training:
         for ii in range(hybrid_model_args.itr):
             # setting record of experiments
-            setting = '{}_ft{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+            setting = '{}_ft{}_ll{}_pl{}_dm{}_nh{}_el{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
                 hybrid_model_args.data,
                 iTransformer_args.seq_len,
                 iTransformer_args.pred_len,
                 iTransformer_args.d_model,
                 iTransformer_args.n_heads,
                 iTransformer_args.e_layers,
-                iTransformer_args.d_layers,
                 iTransformer_args.d_ff,
                 iTransformer_args.factor,
                 iTransformer_args.embed,
@@ -161,7 +156,7 @@ if __name__ == '__main__':
             torch.cuda.empty_cache()
     else:
         ii = 0
-        setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+        setting = '{}_{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
             iTransformer_args.model_id,
             iTransformer_args.model,
             iTransformer_args.data,
@@ -172,7 +167,6 @@ if __name__ == '__main__':
             iTransformer_args.d_model,
             iTransformer_args.n_heads,
             iTransformer_args.e_layers,
-            iTransformer_args.d_layers,
             iTransformer_args.d_ff,
             iTransformer_args.factor,
             iTransformer_args.embed,

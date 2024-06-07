@@ -155,7 +155,7 @@ def encode_roberta(dataset, use_cache=False):
         else:
             ulti_representations_cls.append(representation)
 
-    return ulti_representations, ulti_representations_cls
+    return np.array(ulti_representations), np.array(ulti_representations_cls)
 
 
 # for roberta and roberta_hbm, we suggest do not apply any preprocessing
