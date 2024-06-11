@@ -9,29 +9,35 @@ plt.switch_backend('agg')
 
 
 def adjust_learning_rate(optimizer, epoch, args):
-    # lr = args.learning_rate * (0.2 ** (epoch // 2))
-    if args.lradj == 'type1':
-        lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
-    elif args.lradj == 'type2':
-        lr_adjust = {
-            2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
-            10: 5e-7, 15: 1e-7, 20: 5e-8
-        }
-    elif args.lradj == 'type3':
-        lr_adjust = {
-            2: 7e-5,
-            4: 5e-5,
-            6: 3e-5,
-            8: 7e-6,
-            10: 5e-6,
-            15: 3e-6,
-            20: 7e-7
-        }
-    if epoch in lr_adjust.keys():
-        lr = lr_adjust[epoch]
+    if args.lradj == 'const':
         for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-        print('Updating learning rate to {}'.format(lr))
+            param_group['lr'] = args.learning_rate
+        print('Learning rate const: {}'.format(args.learning_rate))
+    else:
+        # lr = args.learning_rate * (0.2 ** (epoch // 2))
+        if args.lradj == 'type1':
+            lr_adjust = {epoch: args.learning_rate * (0.5 ** ((epoch - 1) // 1))}
+        elif args.lradj == 'type2':
+            lr_adjust = {
+                2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+                10: 5e-7, 15: 1e-7, 20: 5e-8
+            }
+        elif args.lradj == 'type3':
+            lr_adjust = {
+                2: 7e-4,
+                4: 5e-4,
+                6: 3e-4,
+                8: 1e-4,
+                10: 7e-5,
+                15: 5e-5,
+                20: 3e-5
+            }
+
+        if epoch in lr_adjust.keys():
+            lr = lr_adjust[epoch]
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+            print('Updating learning rate to {}'.format(lr))
 
 
 class EarlyStopping:
