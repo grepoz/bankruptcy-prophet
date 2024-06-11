@@ -63,6 +63,8 @@ class Model(nn.Module):
             nn.Linear(self.number_of_variate, 2)
         )
 
+
+
     def forward(self, x_numerical_encoded, batch_x_textual):
         """iTransformer head"""
         if self.use_norm:
@@ -96,15 +98,15 @@ class Model(nn.Module):
         dec_out = dec_out.permute(0, 2, 1)
 
         """hierarchical bert head"""
-        outputs = self.bert(attention_mask=None,
+        hbert_outputs = self.bert(attention_mask=None,
                             position_ids=None,
                             inputs_embeds=batch_x_textual)
 
-        pooled_output = outputs[1]
+        hbert_pooled_output = hbert_outputs[1]
 
         """Output MLP head for the heads"""
         # add the output of the transformer to the output of the bert through second axis
-        output = torch.cat((dec_out, pooled_output.unsqueeze(dim=1)), 1)
+        output = torch.cat((dec_out, hbert_pooled_output.unsqueeze(dim=1)), 1)
 
         # flatten the output
         output = output.view(output.size(0), -1)

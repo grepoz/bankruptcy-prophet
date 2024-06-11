@@ -41,11 +41,11 @@ if __name__ == '__main__':
 
     # learning
     hybrid_model_parser.add_argument('--train_epochs', type=int, default=8, help='train epochs')
-    hybrid_model_parser.add_argument('--batch_size', type=int, default=8, help='batch size of train input data')
-    hybrid_model_parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
-    hybrid_model_parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
+    hybrid_model_parser.add_argument('--batch_size', type=int, default=256, help='batch size of train input data')
+    hybrid_model_parser.add_argument('--patience', type=int, default=2, help='early stopping patience')
+    hybrid_model_parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')
     hybrid_model_parser.add_argument('--des', type=str, default='test', help='exp description')
-    hybrid_model_parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
+    hybrid_model_parser.add_argument('--lradj', type=str, default='const', help='adjust learning rate')
     hybrid_model_parser.add_argument('-r', '--random_seeds', nargs='+', default=['2024'], help="List of random seeds")
 
     hybrid_model_args = hybrid_model_parser.parse_args()
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     iTransformer_parser.add_argument('--c_out', type=int, default=7, help='output size') # applicable on arbitrary number of variates in inverted Transformers
     iTransformer_parser.add_argument('--d_model', type=int, default=768, help='dimension of model')
     iTransformer_parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
-    iTransformer_parser.add_argument('--e_layers', type=int, default=1, help='num of encoder layers')
+    iTransformer_parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
     iTransformer_parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
     iTransformer_parser.add_argument('--moving_avg', type=int, default=25, help='window size of moving average')
     iTransformer_parser.add_argument('--factor', type=int, default=1, help='attn factor')
