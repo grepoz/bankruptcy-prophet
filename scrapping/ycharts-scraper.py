@@ -18,8 +18,8 @@ login_url = "https://ycharts.com/login"
 # scrape_url = "https://ycharts.com/companies/SSSSL/altman_z_score"
 
 payload = {
-    "username": "kruszel15@gmail.com",
-    "password": "!Jaszczur15!"
+    "username": "email",
+    "password": "pass"
 }
 
 not_found_tickers = set()
