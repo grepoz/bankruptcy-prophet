@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from data_provider.data_factory import data_provider
 from utils.tools import EarlyStopping, adjust_learning_rate, visual, save_metrics
-from utils.metrics import metric, calculate_accuracy, calculate_f1, calculate_precision, calculate_specificity
+from utils.metrics import metric, calculate_accuracy, calculate_f1, calculate_precision, calculate_recall, calculate_specificity
 from model import IT_HBERT
 
 warnings.filterwarnings('ignore')
@@ -93,13 +93,11 @@ class Exp_Long_Term_Forecast:
             self.model.train()
 
             for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in (enumerate(pbar := tqdm(train_loader, position=0))):
-                pbar.set_description(f"Epoch: {epoch+1}/{self.hybrid_model_args.train_epochs}")
-
                 model_optim.zero_grad()
 
-                batch_x_numerical = batch_x_numerical[0].float().to(self.device)
-                batch_y_numerical = batch_y_numerical[0].float().to(self.device)
-                batch_x_textual = batch_x_textual[0].float().to(self.device)
+                batch_x_numerical = batch_x_numerical.float().to(self.device)
+                batch_y_numerical = batch_y_numerical.float().to(self.device)
+                batch_x_textual = batch_x_textual.float().to(self.device)
 
                 outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
@@ -117,6 +115,9 @@ class Exp_Long_Term_Forecast:
 
                 accuracy = calculate_accuracy(outputs, batch_y_numerical)
                 epoch_accuracy.append(accuracy)
+
+                pbar.set_description(f"Epoch: {epoch + 1}/{self.hybrid_model_args.train_epochs}, loss: {np.average(epoch_loss):.2f}, "
+                                     f"accuracy: {np.average(epoch_accuracy):.2f}")
 
             epoch_loss = np.average(epoch_loss)
             train_losses.append(epoch_loss)
@@ -163,9 +164,9 @@ class Exp_Long_Term_Forecast:
         with torch.no_grad():
             for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in enumerate(vali_loader):
 
-                batch_x_numerical = batch_x_numerical[0].float().to(self.device)
-                batch_y_numerical = batch_y_numerical[0].float().to(self.device)
-                batch_x_textual = batch_x_textual[0].float().to(self.device)
+                batch_x_numerical = batch_x_numerical.float().to(self.device)
+                batch_y_numerical = batch_y_numerical.float().to(self.device)
+                batch_x_textual = batch_x_textual.float().to(self.device)
 
                 outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device).detach().cpu()
 
@@ -205,9 +206,9 @@ class Exp_Long_Term_Forecast:
         with torch.no_grad():
             for i, (batch_x_numerical, batch_y_numerical, batch_x_textual) in enumerate(test_loader):
 
-                batch_x_numerical = batch_x_numerical[0].float().to(self.device)
-                batch_y_numerical = batch_y_numerical[0].float().to(self.device)
-                batch_x_textual = batch_x_textual[0].float().to(self.device)
+                batch_x_numerical = batch_x_numerical.float().to(self.device)
+                batch_y_numerical = batch_y_numerical.float().to(self.device)
+                batch_x_textual = batch_x_textual.float().to(self.device)
 
                 outputs = self.model(batch_x_numerical, batch_x_textual).float().to(self.device)
 
@@ -224,10 +225,12 @@ class Exp_Long_Term_Forecast:
 
         accuracy = calculate_accuracy(preds, trues)
         precision = calculate_precision(preds, trues)
+        recall = calculate_recall(preds, trues)
         f1 = calculate_f1(preds, trues)
         specificity = calculate_specificity(preds, trues)
 
-        print(f'Test accuracy: {accuracy}, precision: {precision}, specificity: {specificity}, f1: {f1}')
+        metrics = f'Test accuracy: {accuracy:.3f}, precision: {precision:.3f}, recall: {recall:.3f} specificity: {specificity:.3f}, f1: {f1:.3f}'
+        print(metrics)
 
         # result save
         folder_path = './results/' + setting + '/'
@@ -235,10 +238,15 @@ class Exp_Long_Term_Forecast:
             os.makedirs(folder_path)
 
         mae, mse, rmse, mape, mspe = metric(preds, trues)
-        print('mse:{}, mae:{}'.format(mse, mae))
-        f = open("result_long_term_forecast.txt", 'a')
-        f.write(setting + "  \n")
-        f.write('mse:{}, mae:{}'.format(mse, mae))
+        print(f'mse:{mse:.3f}, mae:{mae:.3f}')
+
+        test_metrics_directory = './train_results/metrics'
+
+        f = open(f"{test_metrics_directory}/result_long_term_forecast.txt", 'a')
+
+        f.write(f'setting: {setting}\n')
+        f.write(f'metrics: {metrics}\n')
+        f.write(f'mse:{mse:.3f}, mae:{mae:.3f}')
         f.write('\n')
         f.write('\n')
         f.close()
