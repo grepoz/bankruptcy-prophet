@@ -16,9 +16,9 @@ def data_provider(args, flag):
 
     data_loader = DataLoader(
         data_set,
-        batch_size=1,
-        shuffle=False,
+        batch_size=256,
+        shuffle=True,
         num_workers=1,
-        drop_last=False)
+        drop_last=True)
 
     return data_set, data_loader

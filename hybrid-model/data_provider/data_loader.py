@@ -5,6 +5,7 @@ import string
 from torch.utils.data import Dataset
 from sklearn.preprocessing import StandardScaler
 import warnings
+import random
 from data_provider.encode_text import encode_roberta
 
 warnings.filterwarnings('ignore')
@@ -48,6 +49,8 @@ class Dataset_BC_17_variables_5_years(Dataset):
         df_raw_numerical = pd.read_csv(os.path.join(self.root_path, self.numerical_data_path))
         df_numerical = df_raw_numerical[df_raw_numerical['subset'] == self.set_type]
 
+        # df_shuffled = self.shuffle_data_by_object(df_numerical)
+
         df_raw_textual = pd.read_csv(os.path.join(self.root_path, self.raw_textual_data_path))
         df_textual = df_raw_textual[df_raw_textual['subset'] == self.set_type]
         df_textual['text'] = df_textual['text'].apply(self.preprocess_text)
@@ -65,18 +68,14 @@ class Dataset_BC_17_variables_5_years(Dataset):
             scaler.fit(df_data_x)
             df_data_x = scaler.transform(df_data_x)
 
-        data_x = self.__get_data_grouped_by_years__(df_data_x)
-
-        data_y = df_numerical.groupby('cik').agg({'label': 'first'}).reset_index()
-        data_y = data_y['label'].astype(int).to_numpy()
-
-        self.data_x = data_x
-        self.data_y = data_y
+        self.data_x = self.__get_data_grouped_by_years__(df_data_x)
+        self.data_y = df_numerical[df_numerical.index % 5 == 0].reset_index(drop=True)['label'].astype(int).to_numpy()
 
         textual_data_loaded = False
+        ulti_representations_cls = None
         if self.use_cached_textual_data:
             try:
-                self.data_x_textual = np.load(f'{self.encoded_textual_data_dirpath}{self.encoded_textual_data_filepath}_{self.set_type}.npy')
+                ulti_representations_cls = np.load(f'{self.encoded_textual_data_dirpath}{self.encoded_textual_data_filepath}_{self.set_type}.npy')
                 textual_data_loaded = True
             except FileNotFoundError:
                 print('Cached textual data not found, encoding textual data from scratch')
@@ -84,16 +83,26 @@ class Dataset_BC_17_variables_5_years(Dataset):
 
         if not textual_data_loaded:
             ulti_representations, ulti_representations_cls = self.__encode_textual_data__(df_textual['text'])
-            self.data_x_textual = ulti_representations_cls
 
             np.save(f'{self.encoded_textual_data_dirpath}textual_data_encoded_ulti_representations_{self.set_type}.npy', ulti_representations)
             np.save(f'{self.encoded_textual_data_dirpath}{self.encoded_textual_data_filepath}_{self.set_type}.npy', ulti_representations_cls)
 
-        assert len(self.data_x_textual[0]) == self.textual_data_encoding_size
+        max_len = 1
+        pos = np.zeros((len(ulti_representations_cls), max_len, 768))
 
-        # custom batching mechanism - each object has `company_observation_period` number of observations (in default scenario equal to 5 years),
-        # so we cannot use DataLoader
-        self.batched_x, self.batched_y, self.batched_x_textual = self.__create_batches_from_data__(self.batch_size)
+        ulti_representations_cls = ulti_representations_cls.reshape(-1, 1, 768)
+
+        for idx, doc in enumerate(ulti_representations_cls):
+            if doc.shape[0] <= max_len:
+                pos[idx][:doc.shape[0], :] = doc
+            else:
+                pos[idx][:max_len, :] = doc[:max_len, :]
+
+        self.data_x_textual = pos
+
+        # 1000, 20, 768 | 1000
+
+        assert len(self.data_x_textual[0][0]) == self.textual_data_encoding_size
 
     def __get_data_grouped_by_years__(self, array):
         variables_count = array.shape[1]
@@ -126,10 +135,10 @@ class Dataset_BC_17_variables_5_years(Dataset):
         return batched_X, batched_y, batched_x_textual
 
     def __getitem__(self, index):
-        return self.batched_x[index], self.batched_y[index], self.batched_x_textual[index]
+        return self.data_x[index], self.data_y[index], self.data_x_textual[index]
 
     def __len__(self):
-        return len(self.batched_x)
+        return len(self.data_y)
 
     def __encode_textual_data__(self, data):
         # use roberta to encode textual data into high-dimensional vectorised representations
@@ -138,3 +147,24 @@ class Dataset_BC_17_variables_5_years(Dataset):
         encoded_textual_data = encode_roberta(data)
 
         return encoded_textual_data
+
+    def shuffle_data_by_object(self, df):
+
+        data = df.values.tolist()
+        shuffled_data = []
+        object_data = {}
+
+        for row in data:
+            cik = row[0]
+            if cik not in object_data:
+                object_data[cik] = []
+            object_data[cik].append(row)
+
+        shuffled_object_keys = list(object_data.keys())
+        random.shuffle(shuffled_object_keys)
+
+        for cik in shuffled_object_keys:
+            shuffled_data.extend(object_data[cik])
+
+        shuffled_df = pd.DataFrame(shuffled_data, columns=df.columns).reset_index(drop=True)
+        return shuffled_df
