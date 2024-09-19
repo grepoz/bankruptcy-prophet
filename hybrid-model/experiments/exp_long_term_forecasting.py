@@ -12,6 +12,7 @@ from data_provider.data_factory import data_provider
 from utils.tools import EarlyStopping, adjust_learning_rate, visual, save_metrics
 from utils.metrics import metric, calculate_accuracy, calculate_f1, calculate_precision, calculate_recall, calculate_specificity
 from model import IT_HBERT
+from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings('ignore')
 
@@ -27,6 +28,7 @@ class Exp_Long_Term_Forecast:
         self.HBERT_args = HBERT_args
         self.device = self._acquire_device()
         self.model = self._build_model().to(self.device)
+        self.scaler = StandardScaler()
 
     def _acquire_device(self):
         if self.hybrid_model_args.use_gpu:
@@ -47,7 +49,8 @@ class Exp_Long_Term_Forecast:
         return model
 
     def _get_data(self, flag):
-        data_set, data_loader = data_provider(self.hybrid_model_args, flag)
+        scaler = self.scaler
+        data_set, data_loader = data_provider(self.hybrid_model_args, flag, scaler)
         return data_set, data_loader
 
     def _select_optimizer(self):
@@ -244,6 +247,7 @@ class Exp_Long_Term_Forecast:
 
         f = open(f"{test_metrics_directory}/result_long_term_forecast.txt", 'a')
 
+        f.write(f'exp date: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}\n')
         f.write(f'setting: {setting}\n')
         f.write(f'metrics: {metrics}\n')
         f.write(f'mse:{mse:.3f}, mae:{mae:.3f}')

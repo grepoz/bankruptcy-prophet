@@ -24,8 +24,8 @@ if __name__ == '__main__':
     # data loader
     hybrid_model_parser.add_argument('--data', type=str, default='bankrupt_companies_with_17_variables_5_years', help='dataset type')
     hybrid_model_parser.add_argument('--root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
-    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies-17_variables-5_years_per_object-balanced-split-matched_with_textual_data-shuffled.csv', help='data csv file')
-    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data-matched_and_aligned_with_fin_data-split.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies_with_17variables_5years_split_version4_complete.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data_matched_split_version3.csv', help='data csv file')
     hybrid_model_parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     # GPU
@@ -40,8 +40,9 @@ if __name__ == '__main__':
     hybrid_model_parser.add_argument('--itr', type=int, default=1, help='experiments times')
 
     # learning
-    hybrid_model_parser.add_argument('--train_epochs', type=int, default=8, help='train epochs')
-    hybrid_model_parser.add_argument('--batch_size', type=int, default=256, help='batch size of train input data')
+    hybrid_model_parser.add_argument('--train_epochs', type=int, default=20, help='train epochs')
+    hybrid_model_parser.add_argument('--batch_size', type=int, default=64, help='batch size of train input data')
+    hybrid_model_parser.add_argument('--test_batch_size', type=int, default=1, help='batch size of test and validation input data')
     hybrid_model_parser.add_argument('--patience', type=int, default=2, help='early stopping patience')
     hybrid_model_parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')
     hybrid_model_parser.add_argument('--des', type=str, default='test', help='exp description')
