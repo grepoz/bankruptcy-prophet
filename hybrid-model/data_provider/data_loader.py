@@ -20,7 +20,7 @@ class Dataset_BC_17_variables_5_years(Dataset):
                  scale=True,
                  batch_size=16,
                  company_observation_period=5,
-                 use_cached_textual_data=True,
+                 use_cached_textual_data=False,
                  textual_data_encoding_size=768):
         assert flag in ['train', 'test', 'val']
         self.set_type = flag
@@ -35,7 +35,7 @@ class Dataset_BC_17_variables_5_years(Dataset):
         self.root_path = root_path
         self.numerical_data_path = numerical_data_path
         self.raw_textual_data_path = raw_textual_data_path
-        self.encoded_textual_data_dirpath = './data/bankrupt_companies_with_17_variables_5_years/textual_data/encoded_corpora/'
+        self.encoded_textual_data_dirpath = './data/bankrupt_companies_with_17_variables_5_years/textual_data/encoded_corpora_test_debug/'
         self.encoded_textual_data_filepath = 'textual_data_encoded_ulti_representations_cls'
 
         self.__read_data__()
