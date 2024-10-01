@@ -24,8 +24,8 @@ if __name__ == '__main__':
     # data loader
     hybrid_model_parser.add_argument('--data', type=str, default='bankrupt_companies_with_17_variables_5_years', help='dataset type')
     hybrid_model_parser.add_argument('--root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
-    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/bankrupt_companies_with_17variables_5years_split_version4_complete.csv', help='data csv file')
-    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data_matched_split_version3.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--numerical_data_path', type=str, default='financial_data/numerical_dataset_version5_original.csv', help='data csv file')
+    hybrid_model_parser.add_argument('--raw_textual_data_path', type=str, default='textual_data/raw_corpora/textual_data_version6_original.csv', help='data csv file')
     hybrid_model_parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
     # GPU
@@ -40,10 +40,10 @@ if __name__ == '__main__':
     hybrid_model_parser.add_argument('--itr', type=int, default=1, help='experiments times')
 
     # learning
-    hybrid_model_parser.add_argument('--train_epochs', type=int, default=20, help='train epochs')
+    hybrid_model_parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
     hybrid_model_parser.add_argument('--batch_size', type=int, default=64, help='batch size of train input data')
-    hybrid_model_parser.add_argument('--test_batch_size', type=int, default=1, help='batch size of test and validation input data')
-    hybrid_model_parser.add_argument('--patience', type=int, default=2, help='early stopping patience')
+    hybrid_model_parser.add_argument('--test_batch_size', type=int, default=2, help='batch size of test and validation input data')
+    hybrid_model_parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
     hybrid_model_parser.add_argument('--learning_rate', type=float, default=0.001, help='optimizer learning rate')
     hybrid_model_parser.add_argument('--des', type=str, default='test', help='exp description')
     hybrid_model_parser.add_argument('--lradj', type=str, default='const', help='adjust learning rate')
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     iTransformer_parser.add_argument('--channel_independence', type=bool, default=False, help='whether to use channel_independence mechanism')
     iTransformer_parser.add_argument('--class_strategy', type=str, default='projection', help='projection/average/cls_token')
     iTransformer_parser.add_argument('--target_root_path', type=str, default='./data/bankrupt_companies_with_17_variables_5_years/', help='root path of the data file')
-    iTransformer_parser.add_argument('--target_data_path', type=str, default='bankrupt_companies_with_17_variables_5_years_version2_split.csv', help='data file')
+    iTransformer_parser.add_argument('--target_data_path', type=str, default='numerical_dataset_version5_original.csv', help='data file')
     iTransformer_parser.add_argument('--use_norm', type=int, default=True, help='use norm and denorm')
 
     iTransformer_args = iTransformer_parser.parse_args()

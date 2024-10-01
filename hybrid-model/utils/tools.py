@@ -103,25 +103,20 @@ def visual(true, preds=None, name='./pic/test.pdf'):
     plt.savefig(name, bbox_inches='tight')
 
 
-def save_metrics(acc, loss, name='./pic/test_metrics.pdf'):
-    """
-    Metrics visualization: accuracy, loss
-    """
-    plt.figure()
+def save_metrics(acc, loss, precision, name='./pic/test_metrics.png', title='Wyniki modelu podczas treningu'):
+    plt.figure(figsize=(8, 6))
+    ax = plt.gca()
 
-    # Create the primary axis for accuracy
-    ax1 = plt.gca()  # Get current axes
-    plt.plot(acc, label='Accuracy', linewidth=2, color='blue')  # Plot accuracy on the primary axis
-    plt.ylabel('Accuracy')  # Set label for primary axis
-    ax1.tick_params(axis='y', colors='blue')  # Change accuracy y-axis tick labels to blue
+    # Plot the data
+    ax.plot(acc, label='Dokładność')
+    ax.plot(loss, label='Strata')
+    ax.plot(precision, label='Precyzja')
 
-    # Create a twin axis for loss, sharing the same x-axis
-    ax2 = ax1.twinx()
-    plt.plot(loss, label='Loss', linewidth=2, color='red')  # Plot loss on the twin axis
-    plt.ylabel('Loss')  # Set label for the twin axis
-    ax2.tick_params(axis='y', colors='red')  # Change loss y-axis tick labels to red
+    # Set labels and title
+    ax.set_xlabel('epoka')
+    ax.set_ylabel('wartość')
+    ax.set_title(title)
 
-    # Ensure labels and legends are correct
     plt.legend()
 
     # Save the figure

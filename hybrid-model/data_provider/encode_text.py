@@ -92,6 +92,7 @@ def encode_roberta(dataset, use_cache=False):
     all_corpus = dataset
 
     print('total number of examples ', len(all_corpus), '\n')
+    print('Encoding the dataset...')
 
     # representations of documents by averaging all token embeddings
     representations = []
