@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import string
 from torch.utils.data import Dataset
-from sklearn.preprocessing import StandardScaler
 import warnings
 import random
 from data_provider.encode_text import encode_roberta
@@ -14,18 +13,20 @@ warnings.filterwarnings('ignore')
 class Dataset_BC_17_variables_5_years(Dataset):
     def __init__(self,
                  root_path,
+                 numerical_data_path,
+                 raw_textual_data_path,
                  flag='train',
-                 numerical_data_path='bankrupt_companies_with_17_variables_5_years_version2_split_matched_with_reports.csv',
-                 raw_textual_data_path='textual_data_matched_with_fin_data_preprocessed.csv',
                  scale=True,
+                 scaler=None,
                  batch_size=16,
                  company_observation_period=5,
-                 use_cached_textual_data=False,
+                 use_cached_textual_data=True,
                  textual_data_encoding_size=768):
         assert flag in ['train', 'test', 'val']
         self.set_type = flag
 
         self.scale = scale
+        self.scaler = scaler
 
         self.batch_size = batch_size
         self.company_observation_period = company_observation_period
@@ -35,7 +36,7 @@ class Dataset_BC_17_variables_5_years(Dataset):
         self.root_path = root_path
         self.numerical_data_path = numerical_data_path
         self.raw_textual_data_path = raw_textual_data_path
-        self.encoded_textual_data_dirpath = './data/bankrupt_companies_with_17_variables_5_years/textual_data/encoded_corpora_test_debug/'
+        self.encoded_textual_data_dirpath = './data/bankrupt_companies_with_17_variables_5_years/textual_data/encoded_corpora/'
         self.encoded_textual_data_filepath = 'textual_data_encoded_ulti_representations_cls'
 
         self.__read_data__()
@@ -49,6 +50,8 @@ class Dataset_BC_17_variables_5_years(Dataset):
         df_raw_numerical = pd.read_csv(os.path.join(self.root_path, self.numerical_data_path))
         df_numerical = df_raw_numerical[df_raw_numerical['subset'] == self.set_type]
 
+        # for testing purposes
+        # df_numerical = df_numerical.head(100)
         # df_shuffled = self.shuffle_data_by_object(df_numerical)
 
         df_raw_textual = pd.read_csv(os.path.join(self.root_path, self.raw_textual_data_path))
@@ -63,10 +66,11 @@ class Dataset_BC_17_variables_5_years(Dataset):
 
         df_data_x = df_numerical.drop(columns=['cik', 'ticker', 'label', 'subset', 'Fiscal Period']).to_numpy()
 
+        # scaler should be fitted on train data and applied to test data
         if self.scale:
-            scaler = StandardScaler()
-            scaler.fit(df_data_x)
-            df_data_x = scaler.transform(df_data_x)
+            if self.set_type == 'train':
+                self.scaler.fit(df_data_x)
+            df_data_x = self.scaler.transform(df_data_x)
 
         self.data_x = self.__get_data_grouped_by_years__(df_data_x)
         self.data_y = df_numerical[df_numerical.index % 5 == 0].reset_index(drop=True)['label'].astype(int).to_numpy()
@@ -77,6 +81,7 @@ class Dataset_BC_17_variables_5_years(Dataset):
             try:
                 ulti_representations_cls = np.load(f'{self.encoded_textual_data_dirpath}{self.encoded_textual_data_filepath}_{self.set_type}.npy')
                 textual_data_loaded = True
+                print('Loaded cached textual data')
             except FileNotFoundError:
                 print('Cached textual data not found, encoding textual data from scratch')
                 textual_data_loaded = False

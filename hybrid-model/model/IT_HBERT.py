@@ -47,12 +47,12 @@ class Model(nn.Module):
         )
 
         """Hierarchical BERT head"""
-        self.bert = BertModel(hbert_config)
-        self.dropout = nn.Dropout(hbert_config.hidden_dropout_prob)
-        self.classifier = nn.Linear(hbert_config.hidden_size, self.hbert_config.num_labels)
+        # self.bert = BertModel(hbert_config)
+        # self.dropout = nn.Dropout(hbert_config.hidden_dropout_prob)
+        # self.classifier = nn.Linear(hbert_config.hidden_size, self.hbert_config.num_labels)
 
         """Extra mlp for the output of the heads"""
-        self.number_of_variate = 18
+        self.number_of_variate = 17  # 18 for hybrid model
 
         flatten_input_size = self.number_of_variate * itransformer_configs.d_model
 
@@ -98,15 +98,17 @@ class Model(nn.Module):
         dec_out = dec_out.permute(0, 2, 1)
 
         """hierarchical bert head"""
-        hbert_outputs = self.bert(attention_mask=None,
-                            position_ids=None,
-                            inputs_embeds=batch_x_textual)
-
-        hbert_pooled_output = hbert_outputs[1]
+        # hbert_outputs = self.bert(attention_mask=None,
+        #                     position_ids=None,
+        #                     inputs_embeds=batch_x_textual)
+        #
+        # hbert_pooled_output = hbert_outputs[1]
 
         """Output MLP head for the heads"""
         # add the output of the transformer to the output of the bert through second axis
-        output = torch.cat((dec_out, hbert_pooled_output.unsqueeze(dim=1)), 1)
+        # output = torch.cat((dec_out, hbert_pooled_output.unsqueeze(dim=1)), 1)
+
+        output = dec_out
 
         # flatten the output
         output = output.view(output.size(0), -1)
